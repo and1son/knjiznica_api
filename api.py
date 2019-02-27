@@ -36,10 +36,9 @@ def dodavanje_knjige():
     zanr = request.json.get('Zanr', None)
     autor = request.json.get('Autor', None)
     nakladnik = request.json.get('nakladnik', None)
-    izdavanje = request.json.get('izdavanje', None)
     conn = mysql.connect()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO knjiga (Naslov,Zanr,Autor,nakladnik,izdavanje) VALUES (%s,%s,%s,%s,%s)", (naslov,zanr,autor,nakladnik,izdavanje))
+    cursor.execute("INSERT INTO knjiga (Naslov,Zanr,Autor,nakladnik) VALUES (%s,%s,%s,%s)", (naslov,zanr,autor,nakladnik))
     conn.commit()
     return ("Nova knjiga dodana")
 
@@ -49,10 +48,9 @@ def edit_knjige(sifra):
     zanr = request.json.get('Zanr', None)
     autor = request.json.get('Autor', None)
     nakladnik = request.json.get('nakladnik', None)
-    izdavanje = request.json.get('izdavanje', None)
     conn = mysql.connect()
     cursor = conn.cursor()
-    cursor.execute("UPDATE knjiga SET Naslov=%s, Zanr=%s, Autor=%s, nakladnik=%s, izdavanje=%s WHERE sifra =%s", (naslov, zanr, autor, nakladnik, izdavanje, sifra))
+    cursor.execute("UPDATE knjiga SET Naslov=%s, Zanr=%s, Autor=%s, nakladnik=%s WHERE sifra =%s", (naslov, zanr, autor, nakladnik, sifra))
     cursor.fetchone()
     conn.commit()
     return jsonify("Knjiga je uređena")
@@ -81,6 +79,40 @@ def jedan_izdavatelj_prikaz(sifra):
     izdavatelj = cursor.execute("SELECT * FROM izdavatelj where sifra = %s", sifra)
     izdavatelj = cursor.fetchone()
     return jsonify({'izdavatelj' : izdavatelj})
+
+@app.route('/izdavatelj/<sifra>/knjiga', methods=["GET"])
+def popis_posudenih_knjiga_za_izdavatelja(sifra):
+    conn = mysql.connect()
+    cursor = conn.cursor()
+    izdavatelj_knjiga = cursor.execute("select c.naslov, c.zanr, c.autor from izdavatelj a inner join izdavanje b on b.izdavatelj = a.sifra inner join knjiga c on c.sifra = b.knjiga where a.sifra = %s", sifra)
+    izdavatelj_knjiga = cursor.fetchall()
+    return jsonify({'izdavatelj_knjiga' : izdavatelj_knjiga})
+
+@app.route('/izdavatelj/<sifra>/knjiga/<sifra1>', methods=["GET"])
+def popis_konkretne_knjige_za_izdavatelja(sifra,sifra1):
+    conn = mysql.connect()
+    cursor = conn.cursor()
+    izdavatelj_knjiga_id = cursor.execute("select c.naslov, c.zanr, c.autor from izdavatelj a inner join izdavanje b on b.izdavatelj = a.sifra inner join knjiga c on c.sifra = b.knjiga where a.sifra = %s and c.sifra=%s", (sifra,sifra1))
+    izdavatelj_knjiga_id = cursor.fetchall()
+    return jsonify({'izdavatelj_knjiga' : izdavatelj_knjiga_id})
+
+@app.route('/izdavatelj/<sifra>/izdavanje', methods=["GET"])
+def popis_svih_izdavanja_izdavatelja(sifra):
+    conn = mysql.connect()
+    cursor = conn.cursor()
+    izdavatelj_sva_izdavanja = cursor.execute("select b.datum_izdavanja, b.datum_povratka, cijena from izdavatelj a inner join izdavanje b on b.izdavatelj = a.sifra where a.sifra = %s", (sifra))
+    izdavatelj_sva_izdavanja = cursor.fetchall()
+    return jsonify({'izdavatelj_sva_izdavanja' : izdavatelj_sva_izdavanja})
+
+@app.route('/izdavatelj/<sifra>/izdavanje/<sifra1>', methods=["GET"])
+def popis_konkretnog_izdavanja_izdavatelja(sifra,sifra1):
+    conn = mysql.connect()
+    cursor = conn.cursor()
+    izdavatelj_konkretno_izdavanje = cursor.execute("select b.datum_izdavanja, b.datum_povratka, cijena from izdavatelj a inner join izdavanje b on b.izdavatelj = a.sifra where a.sifra = %s and b.sifra = %s", (sifra,sifra1))
+    izdavatelj_konkretno_izdavanje = cursor.fetchall()
+    return jsonify({'izdavatelj_sva_izdavanja' : izdavatelj_konkretno_izdavanje})
+
+
 
 @app.route('/izdavatelj', methods=["POST"])
 def dodavanje_izdavitelj():
@@ -186,9 +218,10 @@ def dodavanje_izdavanje():
     datum_povratka = request.json.get('datum_povratka', None)
     cijena = request.json.get('cijena', None)
     izdavatelj = request.json.get('izdavatelj', None)
+    knjiga = request.json.get('knjiga', None)
     conn = mysql.connect()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO izdavanje (datum_izdavanja, datum_povratka, cijena, izdavatelj) VALUES (%s,%s,%s,%s)", (datum_izdavanja,datum_povratka,cijena,izdavatelj))
+    cursor.execute("INSERT INTO izdavanje (datum_izdavanja, datum_povratka, cijena, izdavatelj,knjiga) VALUES (%s,%s,%s,%s,%s)", (datum_izdavanja,datum_povratka,cijena,izdavatelj,knjiga))
     conn.commit()
     return ("Novo izdavanje dodano")
 
@@ -198,12 +231,13 @@ def edit_izdavanje(sifra):
     datum_povratka = request.json.get('datum_povratka', None)
     cijena = request.json.get('cijena', None)
     izdavatelj = request.json.get('izdavatelj', None)
+    knjiga = request.json.get('knjiga', None)
     conn = mysql.connect()
     cursor = conn.cursor()
-    cursor.execute("UPDATE izdavanje SET datum_izdavanja=%s, datum_povratka=%s cijena=%s, izdavatelj=%s WHERE sifra =%s", (datum_izdavanja,datum_povratka,cijena,izdavatelj,sifra))
+    cursor.execute("UPDATE izdavanje SET datum_izdavanja=%s, datum_povratka=%s cijena=%s, izdavatelj=%s, knjiga=%s WHERE sifra =%s", (datum_izdavanja,datum_povratka,cijena,izdavatelj,knjiga,sifra))
     cursor.fetchone()
     conn.commit()
-    return jsonify("Nakladnik je uređen")
+    return jsonify("Izdavanje je uređeno")
 
 @app.route('/izdavanje/<sifra>', methods=["DELETE"])
 def brisanje_izdavanje(sifra):
