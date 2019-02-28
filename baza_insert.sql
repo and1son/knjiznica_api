@@ -31,7 +31,7 @@ INSERT INTO izdavanje(datum_izdavanja,datum_povratka,cijena,izdavatelj,knjiga) V
 INSERT INTO izdavanje(datum_izdavanja,datum_povratka,cijena,izdavatelj,knjiga) VALUES('1993-03-01','1993-03-15','15.00',3,3);
 INSERT INTO izdavanje(datum_izdavanja,datum_povratka,cijena,izdavatelj,knjiga) VALUES('1993-03-05','1993-03-20','15.00',2,4);
 INSERT INTO izdavanje(datum_izdavanja,datum_povratka,cijena,izdavatelj,knjiga) VALUES('1993-02-02','1993-03-25','15.00',1,1);
-INSERT INTO izdavanje(datum_izdavanja,datum_povratka,cijena,izdavatelj,knjiga) VALUES('1993-02-03','1993-03-14','15.00',4,5);,knjiga
+INSERT INTO izdavanje(datum_izdavanja,datum_povratka,cijena,izdavatelj,knjiga) VALUES('1993-02-03','1993-03-14','15.00',4,5);
 INSERT INTO izdavanje(datum_izdavanja,datum_povratka,cijena,izdavatelj,knjiga) VALUES('1993-02-07','1993-04-13','15.00',3,3);
 INSERT INTO izdavanje(datum_izdavanja,datum_povratka,cijena,izdavatelj,knjiga) VALUES('1993-05-10','1993-06-11','15.00',2,5);
 INSERT INTO izdavanje(datum_izdavanja,datum_povratka,cijena,izdavatelj,knjiga) VALUES('1993-04-22','1993-05-02','15.00',5,3);
