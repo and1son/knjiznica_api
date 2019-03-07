@@ -133,4 +133,3 @@ INSERT INTO izdavanje(datum_izdavanja,datum_povratka,cijena,izdavatelj,knjiga) V
 INSERT INTO izdavanje(datum_izdavanja,datum_povratka,cijena,izdavatelj,knjiga) VALUES('1994-06-29','1994-07-21','15.00',11,26);
 INSERT INTO izdavanje(datum_izdavanja,datum_povratka,cijena,izdavatelj,knjiga) VALUES('1994-06-29','1994-07-21','15.00',12,1);
 INSERT INTO izdavanje(datum_izdavanja,datum_povratka,cijena,izdavatelj,knjiga) VALUES('1994-06-29','1994-07-21','15.00',17,6);
-
