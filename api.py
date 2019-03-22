@@ -1,5 +1,6 @@
-from flask import Flask, jsonify, request, url_for
+from flask import Flask, jsonify, request, url_for, render_template
 from flaskext.mysql import MySQL
+from flask import json 
 
 app = Flask(__name__)
 mysql = MySQL()
@@ -8,12 +9,43 @@ mysql = MySQL()
 app.config['MYQSL_DATABASE_USER'] = 'root'
 app.config['MYSQL_DATABASE_PASSWORD'] = 'andibasic'
 app.config['MYSQL_DATABASE_DB'] = 'knjiznica'
-app.config['MYASQL_DATABASE_HOST'] = 'localhost'
+app.config['MYSQL_DATABASE_HOST'] = 'localhost'
 mysql.init_app(app)
 
 @app.route('/')
-def home():
-    return jsonify({'poruka' : 'Dobrodošli na početnu stranicu'},{'sve knjige' : "http://localhost:5000/knjiga", 'dodaj knjigu[POST]' : "http://localhost:5000/knjiga", 'dodaj izdavatelja[POST]' : "http://localhost:5000/izdavatelj", 'svi izdavatelji' : "http://localhost:5000/izdavatelj", 'dodaj nakladnika[POST]' : "http://localhost:5000/nakladnik", 'svi nakladnici[GET]' : "http://localhost:5000/nakladnik", 'dodaj izdavanje[POST]' : "http://localhost:5000/izdavanje", 'sva izdavanja' : "http://localhost:5000/izdavanje"  })
+def home(): 
+    #return render_template("index.html", token="Hello Flask+React")
+    return jsonify({'poruka' : 'Dobrodosli na pocetnu stranicu'},{'sve knjige' : "http://localhost:5000/knjiga", 'dodaj knjigu[POST]' : "http://localhost:5000/knjiga", 'dodaj izdavatelja[POST]' : "http://localhost:5000/izdavatelj", 'svi izdavatelji' : "http://localhost:5000/izdavatelj", 'dodaj nakladnika[POST]' : "http://localhost:5000/nakladnik", 'svi nakladnici[GET]' : "http://localhost:5000/nakladnik", 'dodaj izdavanje[POST]' : "http://localhost:5000/izdavanje", 'sva izdavanja' : "http://localhost:5000/izdavanje"  })
+
+
+@app.route('/knjiga', methods=["GET"])
+def sve_knjige_prikaz():
+    conn = mysql.connect()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM knjiga")
+    knjiga = cursor.fetchall()
+    conn.commit()
+    payload = []
+    content = {}
+    for result in knjiga:
+       content = {'sifra': result[0], 'Naslov': result[1], 'Zanr': result[2], 'Autor' : result[3], 'nakladnik' : result[4]}
+       payload.append(content)
+       content = {}
+    return jsonify(payload)
+    #return render_template("index.html", knjiga=knjiga)
+    #return jsonify({'knjiga' : knjiga})
+
+
+    #return jsoify(json.dumps(listKnjiga))
+    #return jsonify({'knjiga' : knjiga})
+
+'''@app.route('/knjiga/<sifra>', methods=["GET"])
+def jedna_knjiga_prikaz(sifra):
+    conn = mysql.connect()
+    cursor = conn.cursor()
+    knjiga = cursor.execute("SELECT * FROM knjiga where sifra = %s", sifra)
+    knjiga = cursor.fetchone()
+    return render_template("knjigasifra.html", knjiga=knjiga)
 
 @app.route('/knjiga', methods=["GET"])
 def sve_knjige_prikaz():
@@ -23,14 +55,23 @@ def sve_knjige_prikaz():
     knjiga = cursor.fetchall()
     conn.commit()
     return jsonify({ 'home' : "http://localhost:5000", 'dodaj knjigu[POST]' : "http://localhost:5000/knjiga"}, {'knjiga' : knjiga})
-
+'''
 @app.route('/knjiga/<sifra>', methods=["GET"])
 def jedna_knjiga_prikaz(sifra):
     conn = mysql.connect()
     cursor = conn.cursor()
-    knjiga = cursor.execute("SELECT * FROM knjiga where sifra = %s", sifra)
+    cursor.execute("SELECT * FROM knjiga where sifra = %s", sifra)
+    row_headers=[x[0] for x in cursor.description] #this will extract row headers
     knjiga = cursor.fetchone()
-    return jsonify({ 'home' : "http://localhost:5000", 'sve knjige' : "http://localhost:5000/knjiga", 'iduca knjiga' : "http://localhost:5000/knjiga/{sifra+1}"}, {'knjiga' : knjiga})
+    payload = []
+    content = {}
+    for result in knjiga:
+       content = {'id': result[0], 'username': result[1], 'password': result[2]}
+       payload.append(content)
+       content = {}
+    return jsonify(payload)
+
+
 
 @app.route('/knjiga', methods=["POST"])
 def dodavanje_knjige():
@@ -55,7 +96,7 @@ def edit_knjige(sifra):
     cursor.execute("UPDATE knjiga SET Naslov=%s, Zanr=%s, Autor=%s, nakladnik=%s WHERE sifra =%s", (naslov, zanr, autor, nakladnik, sifra))
     cursor.fetchone()
     conn.commit()
-    return jsonify({ 'home' : "http://localhost:5000", 'sve knjige[GET]' : "http://localhost:5000/knjiga"},{'obavijest' : "Knjiga je uređena"})
+    return jsonify({ 'home' : "http://localhost:5000", 'sve knjige[GET]' : "http://localhost:5000/knjiga"},{'obavijest' : "Knjiga je uredena"})
 
 '''@app.route('/knjiga/<sifra>', methods=["DELETE"])
 def brisanje_knjige(sifra):
@@ -140,7 +181,7 @@ def edit_izdavatelj(sifra):
     cursor.execute("UPDATE izdavatelj SET Ime=%s, Prezime=%s, Adresa=%s, Mjesto=%s, Postanski_broj=%s WHERE sifra =%s", (ime,prezime,adresa,mjesto,postanski_broj,sifra))
     cursor.fetchone()
     conn.commit()
-    return jsonify({ 'home' : "http://localhost:5000", 'svi izdavatelji[GET]' : "http://localhost:5000/izdavatelj"},{'obavijest' : "Izdavatelj je uređen"})
+    return jsonify({ 'home' : "http://localhost:5000", 'svi izdavatelji[GET]' : "http://localhost:5000/izdavatelj"},{'obavijest' : "Izdavatelj je ureden"})
 
 @app.route('/izdavatelj/<sifra>', methods=["DELETE"])
 def brisanje_izdavatejl(sifra):
@@ -186,7 +227,7 @@ def edit_nakladnik(sifra):
     cursor.execute("UPDATE nakladnik SET Naziv=%s, Mjesto=%s WHERE sifra =%s", (naziv,mjesto,sifra))
     cursor.fetchone()
     conn.commit()
-    return jsonify({ 'home' : "http://localhost:5000", 'svi nakladnici[GET]' : "http://localhost:5000/nakladnik"}, {'obavijest' : 'Nakladnik je uređen'})
+    return jsonify({ 'home' : "http://localhost:5000", 'svi nakladnici[GET]' : "http://localhost:5000/nakladnik"}, {'obavijest' : 'Nakladnik je ureden'})
 '''
 @app.route('/nakladnik/<sifra>', methods=["DELETE"])
 def brisanje_nakladnik(sifra):
@@ -238,7 +279,7 @@ def edit_izdavanje(sifra):
     cursor.execute("UPDATE izdavanje SET datum_izdavanja=%s, datum_povratka=%s, cijena=%s, izdavatelj=%s, knjiga=%s WHERE sifra=%s", (datum_izdavanja,datum_povratka,cijena,izdavatelj,knjiga,sifra))
     cursor.fetchone()
     conn.commit()
-    return jsonify({ 'home' : "http://localhost:5000", 'sva izdavanja[GET]' : "http://localhost:5000/izdavanje"}, {'obavijest' : 'Izdavanje je uređeno'})
+    return jsonify({ 'home' : "http://localhost:5000", 'sva izdavanja[GET]' : "http://localhost:5000/izdavanje"}, {'obavijest' : 'Izdavanje je ureddeno'})
 '''
 @app.route('/izdavanje/<sifra>', methods=["DELETE"])
 def brisanje_izdavanje(sifra):
