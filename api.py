@@ -196,9 +196,18 @@ def svi_nakladnici_prikaz():
     conn = mysql.connect()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM nakladnik")
+    row_headers=[x[0] for x in cursor.description] #this will extract row headers
+    knjiga = cursor.fetchone()
+    payload = []
+    content = {}
     nakladnik = cursor.fetchall()
     conn.commit()
-    return jsonify({ 'home' : "http://localhost:5000", 'dodaj nakladnika[POST]' : "http://localhost:5000/nakladnik"}, {'nakladnici' : nakladnik})
+    for result in nakladnik:
+        content = {'sifra': result[0], 'Naziv': result[1], 'Mjesto': result[2]}
+        payload.append(content)
+        content = {}
+    return jsonify(payload)
+    #return jsonify({ 'home' : "http://localhost:5000", 'dodaj nakladnika[POST]' : "http://localhost:5000/nakladnik"}, {'nakladnici' : nakladnik})
 
 @app.route('/nakladnik/<sifra>', methods=["GET"])
 def jedan_nakladnik_prikaz(sifra):
