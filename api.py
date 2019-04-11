@@ -1,16 +1,75 @@
-from flask import Flask, jsonify, request, url_for, render_template
+from flask import Flask, jsonify, request, url_for, render_template, json, jsonify
 from flaskext.mysql import MySQL
-from flask import json 
+from datetime import datetime
+from flask_cors import CORS
+from flask_bcrypt import Bcrypt
+from flask_jwt_extended import JWTManager
+from flask_jwt_extended import create_access_token
 
 app = Flask(__name__)
-mysql = MySQL()
-
 
 app.config['MYQSL_DATABASE_USER'] = 'root'
 app.config['MYSQL_DATABASE_PASSWORD'] = 'andibasic'
 app.config['MYSQL_DATABASE_DB'] = 'knjiznica'
 app.config['MYSQL_DATABASE_HOST'] = 'localhost'
+app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
+app.config['JWT_SECRET_KEY'] = 'secret'
+
+mysql = MySQL(app)
+bcrypt = Bcrypt(app)
+jwt = JWTManager(app)
+
+CORS(app)
+
 mysql.init_app(app)
+
+@app.route('/users/register', methods=['POST'])
+def register():
+    conn = mysql.connect()
+    cursor = conn.cursor()
+    first_name = request.get_json()['first_name']
+    last_name = request.get_json()['last_name']
+    email = request.get_json()['email']
+    password = bcrypt.generate_password_hash(request.get_json()['password']).decode('utf-8')
+    created = datetime.utcnow()
+
+    cursor.execute("INSERT INTO users(first_name,last_name,email,password,created) VALUES ('" + 
+    str(first_name) + "','" +
+    str(last_name) + "','" +
+    str(email) + "','" +
+    str(password) + "','" +
+    str(created) + "')")
+
+    conn.commit()
+
+    result = {
+        "first_name" : first_name,
+        "last_name" : last_name,
+        "email" : email,
+        "password" : password,
+        "created" : created
+    }
+
+    return jsonify({"result" : result})
+
+@app.route('/users/login', methods=['POST'])
+def login():
+    conn = mysql.connect()
+    cursor = conn.cursor()
+    email = request.get_json()['email']
+    password = request.get_json()['password']
+    result = ""
+    
+    cursor.execute("SELECT * FROM users where email = '" + str(email) + "'")
+    row = cursor.fetchone()
+
+    if bcrypt.check_password_hash(row[4], password):
+        access_token = create_access_token(identity = {'first_name': row[1],'last_name': row[2],'email': row[3]})
+        result = jsonify({"token": access_token})
+    else:
+        result = jsonify({"error":"Invalid username and password"})
+
+    return result
 
 @app.route('/')
 def home(): 
@@ -61,12 +120,12 @@ def jedna_knjiga_prikaz(sifra):
     conn = mysql.connect()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM knjiga where sifra = %s", sifra)
-    row_headers=[x[0] for x in cursor.description] #this will extract row headers
-    knjiga = cursor.fetchone()
+    knjiga = cursor.fetchall()
+    conn.commit()
     payload = []
     content = {}
     for result in knjiga:
-       content = {'id': result[0], 'username': result[1], 'password': result[2]}
+       content = {'sifra': result[0], 'Naslov': result[1], 'Zanr': result[2], 'Autor' : result[3], 'nakladnik' : result[4]}
        payload.append(content)
        content = {}
     return jsonify(payload)
@@ -112,17 +171,32 @@ def svi_izdavatelji_prikaz():
     conn = mysql.connect()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM izdavatelj")
+    payload = []
+    content = {}
     izdavatelj = cursor.fetchall()
     conn.commit()
-    return jsonify({ 'home' : "http://localhost:5000", 'dodaj izdavatelja[POST]' : "http://localhost:5000/izdavatelj"}, {'izdavatelji' : izdavatelj})
+    for result in izdavatelj:
+        content = {'sifra': result[0], 'Ime': result[1], 'Prezime': result[2], 'Adresa': result[3], 'Mjesto' : result[4], 'Postanski_broj' : result[5]}
+        payload.append(content)
+        content = {}
+    return jsonify(payload)
+    #return jsonify({ 'home' : "http://localhost:5000", 'dodaj izdavatelja[POST]' : "http://localhost:5000/izdavatelj"}, {'izdavatelji' : izdavatelj})
 
 @app.route('/izdavatelj/<sifra>', methods=["GET"])
 def jedan_izdavatelj_prikaz(sifra):
     conn = mysql.connect()
     cursor = conn.cursor()
     izdavatelj = cursor.execute("SELECT * FROM izdavatelj where sifra = %s", sifra)
-    izdavatelj = cursor.fetchone()
-    return jsonify({ 'home' : "http://localhost:5000", 'svi izdavatelji' : "http://localhost:5000/izdavatelj"}, {'izdavatelj' : izdavatelj})
+    payload = []
+    content = {}
+    izdavatelj = cursor.fetchall()
+    conn.commit()
+    for result in izdavatelj:
+        content = {'sifra': result[0], 'Ime': result[1], 'Prezime': result[2], 'Adresa': result[3], 'Mjesto' : result[4], 'Postanski_broj' : result[5]}
+        payload.append(content)
+        content = {}
+    return jsonify(payload)
+    #return jsonify({ 'home' : "http://localhost:5000", 'svi izdavatelji' : "http://localhost:5000/izdavatelj"}, {'izdavatelj' : izdavatelj})
 
 @app.route('/izdavatelj/<sifra>/knjiga', methods=["GET"])
 def popis_posudenih_knjiga_za_izdavatelja(sifra):
@@ -197,7 +271,6 @@ def svi_nakladnici_prikaz():
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM nakladnik")
     row_headers=[x[0] for x in cursor.description] #this will extract row headers
-    knjiga = cursor.fetchone()
     payload = []
     content = {}
     nakladnik = cursor.fetchall()
@@ -214,8 +287,26 @@ def jedan_nakladnik_prikaz(sifra):
     conn = mysql.connect()
     cursor = conn.cursor()
     nakladnik = cursor.execute("SELECT * FROM nakladnik where sifra = %s", sifra)
-    nakladnik = cursor.fetchone()
-    return jsonify({ 'home' : "http://localhost:5000", 'svi nakladnici' : "http://localhost:5000/nakladnik"}, {'nakladnici' : nakladnik})
+    payload = []
+    content = {}
+    nakladnik = cursor.fetchall()
+    conn.commit()
+    for result in nakladnik:
+        content = {'sifra': result[0], 'Naziv': result[1], 'Mjesto': result[2]}
+        payload.append(content)
+        content = {}
+    return jsonify(payload)
+    #nakladnici = []
+    #for nakladnik in nakladnik.query.all():
+    #    nakladnici.append({
+    #        'sifra': nakladnik.sifra,
+    #        'Naziv': nakladnik.Naziv,
+    #        'Mjesto': nakladnik.Mjesto
+    #    })
+
+    #return jsonify({"sifra": nakladnik[0], "Naziv" : nakladnik[1], "Mjesto" : nakladnik[2]})
+    
+    #return json.dumps(nakladnik)
 
 @app.route('/nakladnik', methods=["POST"])
 def dodavanje_nakladnik():
@@ -253,15 +344,30 @@ def sva_izdavanja_prikaz():
     cursor.execute("SELECT * FROM izdavanje")
     izdavanje = cursor.fetchall()
     conn.commit()
-    return jsonify({ 'home' : "http://localhost:5000", 'dodaj izdavanje[POST]' : "http://localhost:5000/izdavanje"}, {'izdavanje' : izdavanje})
+    payload = []
+    content = {}
+    for result in izdavanje:
+       content = {'sifra': result[0], 'datum_izdavanja': result[1], 'datum_povratka': result[2], 'cijena' : result[3], 'izdavatelj' : result[4], 'knjiga' :result[5]}
+       payload.append(content)
+       content = {}
+    return jsonify(payload)
+    #return jsonify({ 'home' : "http://localhost:5000", 'dodaj izdavanje[POST]' : "http://localhost:5000/izdavanje"}, {'izdavanje' : izdavanje})
 
 @app.route('/izdavanje/<sifra>', methods=["GET"])
 def jedno_izdavanje_prikaz(sifra):
     conn = mysql.connect()
     cursor = conn.cursor()
     izdavanje = cursor.execute("SELECT * FROM izdavanje where sifra = %s", sifra)
-    izdavanje = cursor.fetchone()
-    return jsonify({ 'home' : "http://localhost:5000", 'sva izdavanja' : "http://localhost:5000/izdavanje"}, {'izdavanje' : izdavanje})
+    izdavanje = cursor.fetchall()
+    conn.commit()
+    payload = []
+    content = {}
+    for result in izdavanje:
+       content = {'sifra': result[0], 'datum_izdavanja': result[1], 'datum_povratka': result[2], 'cijena' : result[3], 'izdavatelj' : result[4], 'knjiga' :result[5]}
+       payload.append(content)
+       content = {}
+    return jsonify(payload)
+    #return jsonify({ 'home' : "http://localhost:5000", 'sva izdavanja' : "http://localhost:5000/izdavanje"}, {'izdavanje' : izdavanje})
 
 @app.route('/izdavanje', methods=["POST"])
 def dodavanje_izdavanje():

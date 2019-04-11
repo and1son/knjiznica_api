@@ -52,6 +52,15 @@ create table korisnici(
 	admin boolean default '0'
 );
 
+create table users(
+	id int not null primary key auto_increment,
+	first_name varchar(50) not null,
+	last_name varchar(50) not null,
+	email varchar(50) not null unique,
+	password varchar(1000) not null,
+	created varchar(50) not null
+);
+
 alter table knjiga ADD FOREIGN KEY (nakladnik) REFERENCES nakladnik(sifra);
 alter table izdavanje ADD FOREIGN KEY (izdavatelj) REFERENCES izdavatelj(sifra);
 alter table izdavanje ADD FOREIGN KEY (knjiga) REFERENCES knjiga(sifra);
